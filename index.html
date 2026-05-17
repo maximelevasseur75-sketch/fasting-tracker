@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#e8f0fe"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Fasting"/>
+  <title>Fasting Tracker</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#eef2fb;
+      --bg2:#e4ecf8;
+      --card:#fff;
+      --card2:#f0f4fd;
+      --blue:#4f7ef8;
+      --blue-light:#dce8ff;
+      --blue-mid:#a8c0f8;
+      --text:#1e2b4a;
+      --text2:#6b7c9e;
+      --text3:#a8b4cc;
+      --accent:#4f7ef8;
+      --accent2:#6b95fa;
+      --green:#22c55e;
+      --green-bg:#f0fdf4;
+      --red:#ef4444;
+      --border:#d8e3f5;
+      --shadow:0 2px 12px rgba(79,126,248,0.10);
+      --shadow2:0 4px 20px rgba(79,126,248,0.14);
+    }
+    html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+    .app{max-width:420px;margin:0 auto;padding:0 18px;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+
+    /* Header */
+    header{width:100%;padding:48px 0 0;display:flex;justify-content:space-between;align-items:center}
+    .logo-text{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.5px}
+    .logo-sub{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;margin-top:2px}
+    .nav{display:flex;background:var(--card);border-radius:12px;padding:4px;gap:2px;box-shadow:var(--shadow)}
+    .nav-btn{background:none;border:none;color:var(--text3);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:8px 16px;border-radius:8px;transition:all 0.2s}
+    .nav-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(79,126,248,0.3)}
+    .nav-btn:hover:not(.active){color:var(--text)}
+
+    /* Views */
+    .view{display:none;width:100%;flex-direction:column;align-items:center;gap:16px;padding-top:24px}
+    .view.active{display:flex}
+
+    /* Goal pills */
+    .goals{display:flex;gap:8px}
+    .goal-btn{padding:9px 18px;border-radius:999px;border:2px solid var(--border);background:var(--card);color:var(--text2);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.2s}
+    .goal-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .goal-btn.active{background:var(--blue-light);border-color:var(--accent);color:var(--accent);font-weight:700}
+
+    /* Circle */
+    .circle-wrap{position:relative;width:270px;height:270px;display:flex;align-items:center;justify-content:center}
+    .circle-bg-ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(79,126,248,0.08) 0%,transparent 70%)}
+    .circle-wrap svg{transform:rotate(-90deg);position:absolute}
+    .circle-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:1}
+    .elapsed-time{font-size:42px;font-family:'Space Mono',monospace;color:var(--text);font-weight:700;letter-spacing:-2px;line-height:1}
+    .goal-label{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-top:8px}
+    .goal-emoji{font-size:22px;margin-top:8px}
+
+    /* Phase card */
+    .phase-card{width:100%;background:var(--card);border-radius:18px;padding:15px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+    .phase-bubble{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:var(--blue-light)}
+    .phase-info{flex:1}
+    .phase-name{font-size:15px;color:var(--text);font-weight:600}
+    .phase-desc{font-size:12px;color:var(--text2);margin-top:2px}
+    .phase-badge-num{font-size:12px;color:var(--accent);font-family:'Space Mono',monospace;background:var(--blue-light);border-radius:8px;padding:5px 9px;font-weight:700}
+
+    /* Info chips */
+    .info-strip{width:100%;display:flex;gap:10px}
+    .info-chip{flex:1;background:var(--card);border-radius:14px;padding:14px;text-align:center;box-shadow:var(--shadow)}
+    .info-chip-label{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase}
+    .info-chip-val{font-size:17px;color:var(--text);font-family:'Space Mono',monospace;margin-top:5px;font-weight:700}
+
+    /* Success */
+    .success{width:100%;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:14px 20px;color:#15803d;font-size:14px;font-weight:600;text-align:center}
+
+    /* Phases bar */
+    .phases-bar{width:100%;background:var(--card);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+    .phases-label{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+    .phases-track{display:flex;gap:5px;align-items:flex-start}
+    .phase-seg{position:relative}
+    .phase-fill-bg{height:5px;border-radius:99px;background:var(--bg2);overflow:hidden}
+    .phase-fill{height:100%;width:0%;transition:width 1s ease;border-radius:99px}
+    .phase-tick{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:6px;text-align:center;transition:color 0.3s}
+    .phase-tick.active{color:var(--accent);font-weight:700}
+
+    /* Start editor */
+    .start-editor{width:100%;background:var(--card);border-radius:18px;padding:15px 16px;box-shadow:var(--shadow)}
+    .start-editor-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+    .start-editor-row{display:flex;align-items:center;gap:8px}
+    .time-input{background:var(--bg2);border:2px solid transparent;border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:19px;text-align:center;padding:9px 10px;width:108px;outline:none;transition:border-color 0.2s}
+    .time-input:focus{border-color:var(--accent);background:#fff}
+    .date-input{background:var(--bg2);border:2px solid transparent;border-radius:10px;color:var(--text2);font-family:'Space Mono',monospace;font-size:11px;text-align:center;padding:9px 8px;flex:1;outline:none;transition:border-color 0.2s}
+    .date-input:focus{border-color:var(--accent);background:#fff}
+    .apply-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.2s;box-shadow:0 2px 8px rgba(79,126,248,0.3)}
+    .apply-btn:hover{opacity:0.85}
+    .shortcut-row{display:flex;gap:6px;margin-top:8px}
+    .shortcut-btn{background:var(--bg2);border:none;color:var(--text2);border-radius:8px;padding:7px 0;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;flex:1;text-align:center}
+    .shortcut-btn:hover{background:var(--accent);color:#fff}
+    .start-hint{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:8px}
+
+    /* CTA */
+    .main-btn{width:200px;padding:17px 0;border-radius:999px;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.25s;letter-spacing:0.3px}
+    .btn-start{background:var(--accent);color:#fff;box-shadow:0 6px 24px rgba(79,126,248,0.35)}
+    .btn-start:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(79,126,248,0.4)}
+    .btn-start:active{transform:scale(0.98)}
+    .btn-stop{background:#fff;color:var(--red);border:2px solid #fecaca;box-shadow:var(--shadow)}
+    .btn-stop:hover{background:#fef2f2}
+
+    /* ── HISTORY ── */
+    .hist-period-tabs{display:flex;width:100%;background:var(--card);border-radius:12px;padding:4px;gap:2px;box-shadow:var(--shadow)}
+    .period-btn{flex:1;background:none;border:none;color:var(--text3);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:8px 0;border-radius:8px;transition:all 0.2s}
+    .period-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(79,126,248,0.25)}
+    .period-btn:hover:not(.active){color:var(--text)}
+
+    .period-view{display:none;width:100%;flex-direction:column;gap:0}
+    .period-view.active{display:flex}
+
+    /* Period summary card */
+    .period-summary{width:100%;background:var(--card);border-radius:18px;padding:18px;box-shadow:var(--shadow);margin-bottom:12px}
+    .period-summary-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
+    .period-stats{display:flex;justify-content:space-between}
+    .pstat{text-align:center}
+    .pstat-val{font-size:20px;color:var(--accent);font-family:'Space Mono',monospace;font-weight:700}
+    .pstat-lbl{font-size:10px;color:var(--text3);margin-top:3px}
+
+    /* Weekly bar chart */
+    .week-bars{width:100%;background:var(--card);border-radius:18px;padding:18px;box-shadow:var(--shadow);margin-bottom:12px}
+    .week-bars-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
+    .bars-row{display:flex;align-items:flex-end;justify-content:space-between;height:80px;gap:6px}
+    .bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px}
+    .bar-outer{width:100%;background:var(--bg2);border-radius:6px;overflow:hidden;flex:1;display:flex;align-items:flex-end}
+    .bar-inner{width:100%;border-radius:6px;background:linear-gradient(180deg,var(--accent2),var(--accent));transition:height 0.6s ease;min-height:0}
+    .bar-label{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace}
+    .bar-val{font-size:9px;color:var(--accent);font-family:'Space Mono',monospace;font-weight:700}
+
+    /* Month calendar */
+    .month-cal{width:100%;background:var(--card);border-radius:18px;padding:18px;box-shadow:var(--shadow);margin-bottom:12px}
+    .month-cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .month-cal-title{font-size:14px;color:var(--text);font-weight:600}
+    .month-nav-btn{background:var(--bg2);border:none;color:var(--text2);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:14px;transition:all 0.2s}
+    .month-nav-btn:hover{background:var(--blue-light);color:var(--accent)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .cal-day-header{text-align:center;font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;padding:2px 0}
+    .cal-day{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'Space Mono',monospace;position:relative;cursor:default}
+    .cal-day.empty{background:transparent}
+    .cal-day.no-fast{background:var(--bg2);color:var(--text3)}
+    .cal-day.partial{background:var(--blue-light);color:var(--accent);font-weight:700}
+    .cal-day.complete{background:var(--accent);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(79,126,248,0.3)}
+    .cal-day.today-marker{outline:2px solid var(--accent);outline-offset:1px}
+
+    /* History list rows */
+    .hist-section-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;width:100%;padding:12px 0 6px}
+    .hist-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card);border-radius:14px;margin-bottom:6px;box-shadow:var(--shadow)}
+    .hist-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+    .hist-icon.ok{background:#f0fdf4;color:var(--green)}
+    .hist-icon.nok{background:var(--bg2);color:var(--text3)}
+    .hist-dur{font-size:14px;color:var(--text);font-weight:600}
+    .hist-date{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:2px}
+    .hist-pct{font-size:13px;font-family:'Space Mono',monospace;font-weight:700;text-align:right}
+    .hist-obj{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:2px;text-align:right}
+    .empty-hist{text-align:center;padding:50px 0;color:var(--text3);font-size:14px;line-height:2}
+
+    footer{margin-top:auto;padding:28px 0 20px;font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px}
+    input[type="time"],input[type="date"]{color-scheme:light}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .fu{animation:fadeUp 0.3s ease forwards}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo-text">Fasting</div>
+      <div class="logo-sub">TRACKER</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" onclick="showView('timer')">Timer</button>
+      <button class="nav-btn" onclick="showView('history')" id="hist-nav-btn">Historique</button>
+    </nav>
+  </header>
+
+  <!-- TIMER -->
+  <div class="view active" id="view-timer">
+    <div class="goals" id="goals-row">
+      <button class="goal-btn active" onclick="setGoal(16,this)">16:8</button>
+      <button class="goal-btn" onclick="setGoal(18,this)">18:6</button>
+      <button class="goal-btn" onclick="setGoal(20,this)">20:4</button>
+      <button class="goal-btn" onclick="setGoal(23,this)">OMAD</button>
+    </div>
+
+    <div class="circle-wrap">
+      <div class="circle-bg-ring"></div>
+      <svg width="270" height="270" viewBox="0 0 270 270">
+        <defs>
+          <linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6b95fa"/>
+            <stop offset="100%" stop-color="#3b6ef6"/>
+          </linearGradient>
+        </defs>
+        <circle cx="135" cy="135" r="116" fill="none" stroke="#dce8ff" stroke-width="14"/>
+        <circle id="arc" cx="135" cy="135" r="116" fill="none" stroke="url(#ag)" stroke-width="14"
+          stroke-dasharray="729" stroke-dashoffset="729" stroke-linecap="round"
+          style="transition:stroke-dashoffset 1s ease;filter:drop-shadow(0 0 8px rgba(79,126,248,0.45))"/>
+      </svg>
+      <div class="circle-center">
+        <div class="elapsed-time" id="elapsed-display">00:00:00</div>
+        <div class="goal-label" id="goal-label">objectif 16h</div>
+        <div class="goal-emoji" id="goal-emoji">⏳</div>
+      </div>
+    </div>
+
+    <div class="phase-card fu" id="phase-card" style="display:none">
+      <div class="phase-bubble" id="phase-bubble-wrap"><span id="phase-bubble">🍽</span></div>
+      <div class="phase-info">
+        <div class="phase-name" id="phase-name">Digestion</div>
+        <div class="phase-desc" id="phase-desc">Votre corps traite le dernier repas</div>
+      </div>
+      <div class="phase-badge-num" id="phase-num">1/4</div>
+    </div>
+
+    <div class="info-strip" id="info-strip" style="display:none">
+      <div class="info-chip">
+        <div class="info-chip-label">Reste</div>
+        <div class="info-chip-val" id="chip-remaining">—</div>
+      </div>
+      <div class="info-chip">
+        <div class="info-chip-label">Fin à</div>
+        <div class="info-chip-val" id="chip-end">—</div>
+      </div>
+    </div>
+
+    <div class="success fu" id="success-banner" style="display:none">🏆 &nbsp;Objectif atteint !</div>
+
+    <div class="phases-bar" id="phases-bar" style="display:none">
+      <div class="phases-label">Phases métaboliques</div>
+      <div class="phases-track" id="phases-track"></div>
+    </div>
+
+    <div class="start-editor fu" id="start-editor" style="display:none">
+      <div class="start-editor-title">✏ &nbsp;Modifier l'heure de début</div>
+      <div class="start-editor-row">
+        <input class="time-input" type="time" id="start-time-input" onfocus="editingTime=true" onblur="editingTime=false"/>
+        <input class="date-input" type="date" id="start-date-input" onfocus="editingTime=true" onblur="editingTime=false"/>
+        <button class="apply-btn" onclick="applyStartTime()">OK</button>
+      </div>
+      <div class="shortcut-row">
+        <button class="shortcut-btn" onclick="shiftStart(-4)">−4h</button>
+        <button class="shortcut-btn" onclick="shiftStart(-2)">−2h</button>
+        <button class="shortcut-btn" onclick="shiftStart(-1)">−1h</button>
+        <button class="shortcut-btn" onclick="shiftStart(1)">+1h</button>
+        <button class="shortcut-btn" onclick="shiftStart(2)">+2h</button>
+      </div>
+      <div class="start-hint" id="start-hint-txt">Démarré : —</div>
+    </div>
+
+    <button class="main-btn btn-start" id="main-btn" onclick="toggleFast()">▶ &nbsp;Démarrer</button>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="view" id="view-history">
+    <div class="hist-period-tabs">
+      <button class="period-btn active" onclick="setPeriod('day',this)">Jour</button>
+      <button class="period-btn" onclick="setPeriod('week',this)">Semaine</button>
+      <button class="period-btn" onclick="setPeriod('month',this)">Mois</button>
+      <button class="period-btn" onclick="setPeriod('all',this)">Tout</button>
+    </div>
+
+    <!-- DAY -->
+    <div class="period-view active" id="pv-day"></div>
+    <!-- WEEK -->
+    <div class="period-view" id="pv-week"></div>
+    <!-- MONTH -->
+    <div class="period-view" id="pv-month"></div>
+    <!-- ALL -->
+    <div class="period-view" id="pv-all"></div>
+  </div>
+
+  <footer>FASTING · TRACKER</footer>
+</div>
+<script>
+const PHASES=[
+  {from:0,to:4,label:"Digestion",desc:"Traitement du dernier repas",icon:"🍽",color:"#93c5fd"},
+  {from:4,to:8,label:"Cétose légère",desc:"Le corps commence à brûler les graisses",icon:"🔥",color:"#60a5fa"},
+  {from:8,to:16,label:"Autophagie",desc:"Régénération cellulaire activée",icon:"⚡",color:"#3b82f6"},
+  {from:16,to:24,label:"Deep Fast",desc:"Jeûne profond, effets maximaux",icon:"✦",color:"#1d4ed8"},
+];
+let goalHours=16,startTime=null,ticker=null;
+let history=JSON.parse(localStorage.getItem('fh2')||'[]');
+const pad=n=>String(n).padStart(2,'0');
+const fmt=ms=>{const s=Math.floor(ms/1000);return`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`};
+const fmtH=ms=>+(ms/3600000).toFixed(1);
+const fmtDate=ts=>new Date(ts).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+const fmtTime=ts=>new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+const dayKey=ts=>{const d=new Date(ts);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.nav-btn')[v==='timer'?0:1].classList.add('active');
+  if(v==='history') renderHistory();
+}
+function setGoal(h,btn){goalHours=h;document.querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('goal-label').textContent=`objectif ${h}h`}
+function toggleFast(){startTime?onStop():(startTime=Date.now(),onStart())}
+function onStart(){
+  document.getElementById('goals-row').style.display='none';
+  document.getElementById('main-btn').className='main-btn btn-stop';
+  document.getElementById('main-btn').textContent='■  Arrêter';
+  ['phase-card','info-strip','phases-bar','start-editor'].forEach(id=>{document.getElementById(id).style.display=id==='info-strip'?'flex':'block'});
+  buildPhasesBar();updateStartEditor();
+  ticker=setInterval(tick,1000);tick();
+}
+function onStop(){
+  clearInterval(ticker);
+  const duration=Date.now()-startTime;
+  history.unshift({start:startTime,duration,goal:goalHours,completed:duration>=goalHours*3600000});
+  if(history.length>200)history.pop();
+  localStorage.setItem('fh2',JSON.stringify(history));
+  startTime=null;
+  document.getElementById('goals-row').style.display='flex';
+  document.getElementById('main-btn').className='main-btn btn-start';
+  document.getElementById('main-btn').textContent='▶  Démarrer';
+  ['phase-card','info-strip','phases-bar','success-banner','start-editor'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('elapsed-display').textContent='00:00:00';
+  document.getElementById('goal-emoji').textContent='⏳';
+  document.getElementById('arc').style.strokeDashoffset='729';
+  updateHistNav();
+}
+function tick(){
+  if(!startTime)return;
+  const elapsed=Date.now()-startTime,goalMs=goalHours*3600000;
+  const progress=Math.min(elapsed/goalMs,1),elapsedH=elapsed/3600000;
+  document.getElementById('elapsed-display').textContent=fmt(elapsed);
+  document.getElementById('arc').style.strokeDashoffset=729*(1-progress);
+  const phase=PHASES.find(p=>elapsedH>=p.from&&elapsedH<p.to)||PHASES[3];
+  const pi=PHASES.indexOf(phase);
+  document.getElementById('phase-bubble').textContent=phase.icon;
+  document.getElementById('phase-name').textContent=phase.label;
+  document.getElementById('phase-desc').textContent=phase.desc;
+  document.getElementById('phase-num').textContent=`${pi+1}/4`;
+  document.getElementById('chip-remaining').textContent=fmt(Math.max(0,goalMs-elapsed));
+  document.getElementById('chip-end').textContent=fmtTime(startTime+goalMs);
+  const done=progress>=1;
+  document.getElementById('success-banner').style.display=done?'block':'none';
+  document.getElementById('goal-emoji').textContent=done?'🏆':'⏳';
+  PHASES.forEach((p,i)=>{
+    const f=document.getElementById('pf-'+i),t=document.getElementById('pt-'+i);
+    if(!f)return;
+    f.style.width=Math.min(100,Math.max(0,(elapsedH-p.from)/(p.to-p.from)*100))+'%';
+    f.style.background=p.color;
+    t.className='phase-tick'+(phase===p?' active':'');
+  });
+  updateStartEditor();
+  // Sauvegarde à chaque seconde — résiste à la fermeture brutale sur mobile
+  if(startTime) localStorage.setItem('fasting-active',JSON.stringify({start:startTime,goal:goalHours}));
+}
+function buildPhasesBar(){
+  const track=document.getElementById('phases-track');track.innerHTML='';
+  PHASES.forEach((p,i)=>{const div=document.createElement('div');div.className='phase-seg';div.style.flex=p.to-p.from;div.innerHTML=`<div class="phase-fill-bg"><div class="phase-fill" id="pf-${i}"></div></div><div class="phase-tick" id="pt-${i}">${p.icon}</div>`;track.appendChild(div)});
+}
+let editingTime=false;
+function updateStartEditor(){
+  if(!startTime||editingTime)return;
+  const d=new Date(startTime);
+  document.getElementById('start-time-input').value=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  document.getElementById('start-date-input').value=d.toISOString().split('T')[0];
+  document.getElementById('start-hint-txt').textContent='Démarré : '+fmtDate(startTime)+' à '+fmtTime(startTime);
+}
+function applyStartTime(){
+  const t=document.getElementById('start-time-input').value,dt=document.getElementById('start-date-input').value;
+  if(!t||!dt)return;
+  const[h,m]=t.split(':').map(Number);const d=new Date(dt);d.setHours(h,m,0,0);
+  if(d>Date.now()){alert("L'heure ne peut pas être dans le futur.");return}
+  startTime=d.getTime();tick();
+}
+function shiftStart(h){if(!startTime)return;const n=startTime+h*3600000;if(n>Date.now())return;startTime=n;tick()}
+function updateHistNav(){document.getElementById('hist-nav-btn').textContent=history.length>0?`Historique (${history.length})`:'Historique'}
+
+/* ── HISTORY RENDERING ── */
+let currentPeriod='day';
+let calMonth=new Date();
+
+function setPeriod(p,btn){
+  currentPeriod=p;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.period-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('pv-'+p).classList.add('active');
+  renderHistory();
+}
+
+function renderHistory(){
+  renderDay();renderWeek();renderMonth();renderAll();
+}
+
+/* ─ DAY ─ */
+function renderDay(){
+  const el=document.getElementById('pv-day');
+  if(history.length===0){el.innerHTML='<div class="empty-hist">Lance ton premier jeûne<br/>pour voir l\'historique.</div>';return}
+  // Group by day
+  const groups={};
+  history.forEach(e=>{const k=dayKey(e.start);if(!groups[k])groups[k]=[];groups[k].push(e)});
+  const keys=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).slice(0,14);
+  let html='';
+  keys.forEach(k=>{
+    const entries=groups[k];
+    const total=entries.reduce((a,b)=>a+b.duration,0);
+    const completed=entries.filter(e=>e.completed).length;
+    html+=`<div class="hist-section-title">${new Date(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</div>`;
+    entries.forEach(e=>{
+      const pct=Math.min(100,Math.round(e.duration/(e.goal*3600000)*100));
+      html+=`<div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hist-icon ${e.completed?'ok':'nok'}">${e.completed?'✓':'·'}</div><div><div class="hist-dur">${fmt(e.duration)}</div><div class="hist-date">${fmtTime(e.start)} → ${fmtTime(e.start+e.duration)}</div></div></div><div><div class="hist-pct" style="color:${e.completed?'#22c55e':'#a8b4cc'}">${pct}%</div><div class="hist-obj">obj. ${e.goal}h</div></div></div>`;
+    });
+  });
+  el.innerHTML=html;
+}
+
+/* ─ WEEK ─ */
+function renderWeek(){
+  const el=document.getElementById('pv-week');
+  if(history.length===0){el.innerHTML='<div class="empty-hist">Aucune donnée.</div>';return}
+
+  // Get last 8 weeks
+  const now=Date.now();
+  const weeks=[];
+  for(let i=0;i<8;i++){
+    const wEnd=now-i*7*86400000;
+    const wStart=wEnd-7*86400000;
+    weeks.push({start:wStart,end:wEnd,entries:history.filter(e=>e.start>=wStart&&e.start<wEnd)});
+  }
+  weeks.reverse();
+
+  const labels=['S-7','S-6','S-5','S-4','S-3','S-2','S-1','Cette\nsem.'];
+  const maxH=Math.max(...weeks.map(w=>w.entries.reduce((a,b)=>a+b.duration,0)/3600000),1);
+
+  // Bar chart
+  let barsHtml='';
+  weeks.forEach((w,i)=>{
+    const totalH=w.entries.reduce((a,b)=>a+b.duration,0)/3600000;
+    const h=Math.round(totalH/maxH*100);
+    barsHtml+=`<div class="bar-col"><div class="bar-outer"><div class="bar-inner" style="height:${h}%"></div></div><div class="bar-label">${labels[i].replace('\n','<br>')}</div>${totalH>0?`<div class="bar-val">${totalH.toFixed(0)}h</div>`:''}</div>`;
+  });
+
+  // Current week summary
+  const thisWeek=weeks[7];
+  const twTotal=thisWeek.entries.reduce((a,b)=>a+b.duration,0);
+  const twComp=thisWeek.entries.filter(e=>e.completed).length;
+  const twAvg=thisWeek.entries.length>0?twTotal/thisWeek.entries.length:0;
+
+  el.innerHTML=`
+    <div class="week-bars"><div class="week-bars-title">Heures de jeûne / semaine</div><div class="bars-row">${barsHtml}</div></div>
+    <div class="period-summary"><div class="period-summary-title">Cette semaine</div><div class="period-stats">
+      <div class="pstat"><div class="pstat-val">${thisWeek.entries.length}</div><div class="pstat-lbl">Jeûnes</div></div>
+      <div class="pstat"><div class="pstat-val">${twComp}</div><div class="pstat-lbl">Complétés</div></div>
+      <div class="pstat"><div class="pstat-val">${(twTotal/3600000).toFixed(1)}h</div><div class="pstat-lbl">Total</div></div>
+      <div class="pstat"><div class="pstat-val">${twAvg>0?(twAvg/3600000).toFixed(1)+'h':'—'}</div><div class="pstat-lbl">Moyenne</div></div>
+    </div></div>`;
+}
+
+/* ─ MONTH ─ */
+function renderMonth(){
+  const el=document.getElementById('pv-month');
+  if(history.length===0){el.innerHTML='<div class="empty-hist">Aucune donnée.</div>';return}
+
+  const y=calMonth.getFullYear(),m=calMonth.getMonth();
+  const monthName=calMonth.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  const firstDay=(new Date(y,m,1).getDay()+6)%7; // Mon=0
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const today=new Date();
+
+  // Build day map
+  const dayMap={};
+  history.forEach(e=>{
+    const d=new Date(e.start);
+    if(d.getFullYear()===y&&d.getMonth()===m){
+      const k=d.getDate();
+      if(!dayMap[k])dayMap[k]=[];
+      dayMap[k].push(e);
+    }
+  });
+
+  const dayLabels=['L','M','M','J','V','S','D'];
+  let calHtml=dayLabels.map(d=>`<div class="cal-day-header">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++)calHtml+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const entries=dayMap[d]||[];
+    const isToday=today.getDate()===d&&today.getMonth()===m&&today.getFullYear()===y;
+    let cls='no-fast';
+    if(entries.length>0){cls=entries.some(e=>e.completed)?'complete':'partial'}
+    calHtml+=`<div class="cal-day ${cls}${isToday?' today-marker':''}">${d}</div>`;
+  }
+
+  // Month stats
+  const monthEntries=Object.values(dayMap).flat();
+  const mTotal=monthEntries.reduce((a,b)=>a+b.duration,0);
+  const mComp=monthEntries.filter(e=>e.completed).length;
+  const mDays=Object.keys(dayMap).length;
+
+  // Previous months summary
+  const prevMonths=[];
+  for(let i=1;i<=5;i++){
+    const pm=new Date(y,m-i,1);
+    const py=pm.getFullYear(),pmm=pm.getMonth();
+    const entries=history.filter(e=>{const d=new Date(e.start);return d.getFullYear()===py&&d.getMonth()===pmm});
+    if(entries.length>0)prevMonths.push({label:pm.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}),entries,total:entries.reduce((a,b)=>a+b.duration,0),comp:entries.filter(e=>e.completed).length});
+  }
+
+  let prevHtml='';
+  if(prevMonths.length>0){
+    prevHtml='<div class="hist-section-title">Mois précédents</div>';
+    prevMonths.forEach(pm=>{
+      prevHtml+=`<div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hist-icon ok" style="font-size:12px;font-family:\'Space Mono\'">${pm.label}</div><div><div class="hist-dur">${pm.entries.length} jeûne${pm.entries.length>1?'s':''}</div><div class="hist-date">${pm.comp} complétés</div></div></div><div><div class="hist-pct" style="color:var(--accent)">${(pm.total/3600000).toFixed(0)}h</div><div class="hist-obj">total</div></div></div>`;
+    });
+  }
+
+  el.innerHTML=`
+    <div class="month-cal">
+      <div class="month-cal-header">
+        <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="month-cal-title">${monthName}</div>
+        <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-grid">${calHtml}</div>
+    </div>
+    <div class="period-summary"><div class="period-summary-title">Ce mois</div><div class="period-stats">
+      <div class="pstat"><div class="pstat-val">${monthEntries.length}</div><div class="pstat-lbl">Jeûnes</div></div>
+      <div class="pstat"><div class="pstat-val">${mComp}</div><div class="pstat-lbl">Complétés</div></div>
+      <div class="pstat"><div class="pstat-val">${mDays}</div><div class="pstat-lbl">Jours actifs</div></div>
+      <div class="pstat"><div class="pstat-val">${(mTotal/3600000).toFixed(0)}h</div><div class="pstat-lbl">Total</div></div>
+    </div></div>
+    ${prevHtml}`;
+}
+function changeMonth(dir){calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+dir,1);renderMonth()}
+
+/* ─ ALL ─ */
+function renderAll(){
+  const el=document.getElementById('pv-all');
+  if(history.length===0){el.innerHTML='<div class="empty-hist">Lance ton premier jeûne<br/>pour voir l\'historique.</div>';return}
+  const total=history.reduce((a,b)=>a+b.duration,0);
+  const comp=history.filter(e=>e.completed).length;
+  const best=Math.max(...history.map(e=>e.duration));
+  const avg=total/history.length;
+  let html=`<div class="period-summary"><div class="period-summary-title">Depuis le début</div><div class="period-stats">
+    <div class="pstat"><div class="pstat-val">${history.length}</div><div class="pstat-lbl">Jeûnes</div></div>
+    <div class="pstat"><div class="pstat-val">${comp}</div><div class="pstat-lbl">Complétés</div></div>
+    <div class="pstat"><div class="pstat-val">${(total/3600000).toFixed(0)}h</div><div class="pstat-lbl">Total</div></div>
+    <div class="pstat"><div class="pstat-val">${Math.round(comp/history.length*100)}%</div><div class="pstat-lbl">Réussite</div></div>
+  </div></div>
+  <div class="hist-section-title">Meilleur · Moyenne</div>
+  <div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hist-icon ok">🏆</div><div><div class="hist-dur">Record</div><div class="hist-date">${fmt(best)}</div></div></div><div><div class="hist-dur">Moyenne</div><div class="hist-date">${fmt(avg)}</div></div></div>
+  <div class="hist-section-title">Tous les jeûnes</div>`;
+  history.forEach(e=>{
+    const pct=Math.min(100,Math.round(e.duration/(e.goal*3600000)*100));
+    html+=`<div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hist-icon ${e.completed?'ok':'nok'}">${e.completed?'✓':'·'}</div><div><div class="hist-dur">${fmt(e.duration)}</div><div class="hist-date">${fmtDate(e.start)} ${fmtTime(e.start)}</div></div></div><div><div class="hist-pct" style="color:${e.completed?'#22c55e':'#a8b4cc'}">${pct}%</div><div class="hist-obj">obj. ${e.goal}h</div></div></div>`;
+  });
+  el.innerHTML=html;
+}
+
+/* Restore */
+const saved=localStorage.getItem('fasting-active');
+if(saved){const p=JSON.parse(saved);startTime=p.start;goalHours=p.goal;document.querySelectorAll('.goal-btn').forEach(b=>{if((goalHours===23&&b.textContent==='OMAD')||parseInt(b.textContent)===goalHours){b.classList.add('active');document.getElementById('goal-label').textContent=`objectif ${goalHours}h`}else b.classList.remove('active')});onStart()}
+window.addEventListener('beforeunload',()=>{if(startTime)localStorage.setItem('fasting-active',JSON.stringify({start:startTime,goal:goalHours}));else localStorage.removeItem('fasting-active')});
+updateHistNav();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
