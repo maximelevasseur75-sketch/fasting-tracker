@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#eef2fb"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Fasting"/>
+  <title>Fasting Tracker</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#e8f0fe;--bg2:#c8daf8;--card:#f8fbff;
+      --accent:#1a56db;--accent2:#3b82f6;--blue-light:#dbeafe;
+      --gold:#c8900a;--gold2:#f5c842;--gold3:#ffe070;--gold-light:#fef5d0;
+      --text:#091830;--text2:#2a4a70;--text3:#7090b8;
+      --green:#10b981;--red:#ef4444;--border:#a8c8f0;
+      --shadow:0 2px 14px rgba(26,86,219,0.10);
+    }
+    html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+    .app{max-width:420px;margin:0 auto;padding:0 18px;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+
+    header{width:100%;padding:44px 0 0;display:flex;justify-content:space-between;align-items:center}
+    .logo-text{font-size:21px;font-weight:800;color:#1a56db;letter-spacing:-0.5px}
+    .logo-sub{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;margin-top:2px}
+    .nav{display:flex;background:#1a56db;border-radius:12px;padding:4px;gap:2px;box-shadow:var(--shadow)}
+    .nav-btn{background:none;border:none;color:rgba(255,255,255,0.6);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;padding:7px 11px;border-radius:8px;transition:all 0.2s}
+    .nav-btn.active{background:#f5c842;color:#0f2040;box-shadow:0 2px 8px rgba(26,86,219,0.3)}
+    .nav-btn:hover:not(.active){color:#fff}
+
+    .view{display:none;width:100%;flex-direction:column;align-items:center;gap:14px;padding-top:22px}
+    .view.active{display:flex}
+
+    /* Goals */
+    .goals{display:flex;gap:8px}
+    .goal-btn{padding:8px 16px;border-radius:999px;border:2px solid var(--border);background:var(--card);color:var(--text2);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.2s}
+    .goal-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .goal-btn.active{background:#fef5d0;border-color:#c8900a;color:#7a5a00;font-weight:700;box-shadow:0 2px 10px rgba(200,144,10,0.25)}
+
+    /* Circle */
+    .circle-wrap{position:relative;width:260px;height:260px;display:flex;align-items:center;justify-content:center}
+    .circle-glow{position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse at 50% 30%,rgba(245,200,66,0.22) 0%,rgba(26,86,219,0.10) 50%,transparent 70%)}
+    .circle-wrap svg{transform:rotate(-90deg);position:absolute}
+    .circle-center{display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+    .elapsed-time{font-size:40px;font-family:'Space Mono',monospace;color:var(--text);font-weight:700;letter-spacing:-2px;line-height:1}
+    .goal-label{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-top:7px}
+    .goal-emoji{font-size:22px;margin-top:7px}
+
+    /* Phase */
+    .phase-card{width:100%;background:#eef4ff;border-radius:16px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+    .phase-bubble{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;background:var(--blue-light)}
+    .phase-info{flex:1}
+    .phase-name{font-size:14px;color:var(--text);font-weight:600}
+    .phase-desc{font-size:12px;color:var(--text2);margin-top:1px}
+    .phase-num{font-size:12px;color:#c8900a;font-family:'Space Mono',monospace;background:var(--blue-light);border-radius:7px;padding:4px 8px;font-weight:700}
+
+    /* Chips */
+    .info-strip{width:100%;display:flex;gap:10px}
+    .info-chip{flex:1;background:#eef4ff;border-radius:13px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+    .chip-label{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase}
+    .chip-val{font-size:16px;color:var(--text);font-family:'Space Mono',monospace;margin-top:4px;font-weight:700}
+
+    .success{width:100%;background:#fef5d0;border:2px solid #f5c842;border-radius:13px;padding:13px 18px;color:#7a5a00;font-weight:600;font-size:14px;font-weight:600;text-align:center}
+
+    /* Phases bar */
+    .phases-bar{width:100%;background:#eef4ff;border-radius:13px;padding:13px 15px;box-shadow:var(--shadow)}
+    .phases-label{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:9px}
+    .phases-track{display:flex;gap:5px;align-items:flex-start}
+    .phase-seg{position:relative}
+    .phase-fill-bg{height:5px;border-radius:99px;background:var(--bg2);overflow:hidden}
+    .phase-fill{height:100%;width:0%;transition:width 1s ease;border-radius:99px}
+    .phase-tick{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:5px;text-align:center;transition:color 0.3s}
+    .phase-tick.active{color:var(--accent);font-weight:700}
+
+    /* Time editors */
+    .editors-wrap{width:100%;display:flex;flex-direction:column;gap:10px}
+    .time-editor{width:100%;background:#eef4ff;border-radius:16px;padding:13px 15px;box-shadow:var(--shadow)}
+    .editor-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:9px}
+    .editor-row{display:flex;align-items:center;gap:7px}
+    .t-input{background:var(--bg2);border:2px solid transparent;border-radius:9px;color:var(--text);font-family:'Space Mono',monospace;font-size:18px;text-align:center;padding:8px 9px;width:100px;outline:none;transition:border-color 0.2s}
+    .t-input:focus{border-color:var(--accent);background:#fff}
+    .d-input{background:var(--bg2);border:2px solid transparent;border-radius:9px;color:var(--text2);font-family:'Space Mono',monospace;font-size:11px;text-align:center;padding:8px;flex:1;outline:none;transition:border-color 0.2s}
+    .d-input:focus{border-color:var(--accent);background:#fff}
+    .ok-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(26,86,219,0.3)}
+    .ok-btn:hover{opacity:0.85}
+    .sc-row{display:flex;gap:5px;margin-top:7px}
+    .sc-btn{background:var(--bg2);border:none;color:var(--text2);border-radius:7px;padding:6px 0;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;flex:1;text-align:center}
+    .sc-btn:hover{background:var(--accent);color:#fff}
+    .editor-hint{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:7px}
+
+    /* CTA */
+    .main-btn{width:190px;padding:16px 0;border-radius:999px;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.25s}
+    .btn-start{background:linear-gradient(135deg,#ffe070,#f5c842,#c8900a);color:#3a1a00;box-shadow:0 6px 28px rgba(200,144,10,0.50);font-weight:800;letter-spacing:1px}
+    .btn-start:hover{transform:translateY(-1px);box-shadow:0 12px 36px rgba(200,144,10,0.60)}
+    .btn-start:active{transform:scale(0.98)}
+    .btn-stop{background:#fff;color:var(--red);border:2px solid #fecaca;box-shadow:var(--shadow)}
+    .btn-stop:hover{background:#fef2f2}
+
+    /* History */
+    .hist-tabs{display:flex;width:100%;background:#1a56db;border-radius:12px;padding:4px;gap:2px;box-shadow:var(--shadow)}
+    .period-btn{flex:1;background:none;border:none;color:rgba(255,255,255,0.6);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:8px 0;border-radius:8px;transition:all 0.2s}
+    .period-btn.active{background:#f5c842;color:#0f2040;font-weight:700;box-shadow:0 2px 8px rgba(26,86,219,0.25)}
+    .period-btn:hover:not(.active){color:#fff}
+    .pv{display:none;width:100%;flex-direction:column;gap:0}
+    .pv.active{display:flex}
+    .period-summary{width:100%;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:10px}
+    .ps-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px}
+    .ps-stats{display:flex;justify-content:space-between}
+    .pstat{text-align:center}
+    .pstat-val{font-size:19px;color:#c8900a;font-family:'Space Mono',monospace;font-weight:700}
+    .pstat-lbl{font-size:10px;color:var(--text3);margin-top:3px}
+    .week-bars{width:100%;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:10px}
+    .wb-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px}
+    .bars-row{display:flex;align-items:flex-end;justify-content:space-between;height:75px;gap:5px}
+    .bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px}
+    .bar-outer{width:100%;background:var(--bg2);border-radius:6px;overflow:hidden;flex:1;display:flex;align-items:flex-end}
+    .bar-inner{width:100%;border-radius:6px;background:linear-gradient(180deg,#f0c040,#1a56db);transition:height 0.6s ease}
+    .bar-label{font-size:9px;color:var(--text3);font-family:'Space Mono',monospace}
+    .bar-val{font-size:9px;color:#c8900a;font-family:'Space Mono',monospace;font-weight:700}
+    .month-cal{width:100%;background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:10px}
+    .mc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .mc-title{font-size:14px;color:var(--text);font-weight:600}
+    .mc-nav{background:var(--bg2);border:none;color:var(--text2);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:14px;transition:all 0.2s}
+    .mc-nav:hover{background:var(--blue-light);color:var(--accent)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+    .cal-dh{text-align:center;font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;padding:2px 0}
+    .cal-day{aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:'Space Mono',monospace}
+    .cal-day.empty{background:transparent}
+    .cal-day.no-fast{background:var(--bg2);color:var(--text3)}
+    .cal-day.partial{background:var(--blue-light);color:var(--accent);font-weight:700}
+    .cal-day.complete{background:var(--accent);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(26,86,219,0.3)}
+    .cal-day.today-marker{outline:2px solid var(--accent);outline-offset:1px}
+    .hs-title-row{display:flex;justify-content:space-between;align-items:center;width:100%;padding:10px 0 5px}
+    .hs-title{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px;text-transform:uppercase}
+    .del-day-btn{background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:all 0.2s}
+    .del-day-btn:hover{background:#fef2f2;color:var(--red)}
+    /* Detailed history card */
+    .hist-card{background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:var(--shadow);overflow:hidden}
+    .hist-card-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px}
+    .hist-card-left{display:flex;align-items:center;gap:10px}
+    .hi{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+    .hi.ok{background:#f0fdf4;color:var(--green)}
+    .hi.nok{background:var(--bg2);color:var(--text3)}
+    .hd{font-size:15px;color:var(--text);font-weight:700}
+    .htime{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:2px}
+    .hist-card-right{display:flex;align-items:center;gap:8px}
+    .hpct-badge{font-size:13px;font-family:'Space Mono',monospace;font-weight:700;background:var(--bg2);border-radius:8px;padding:4px 9px}
+    .del-entry-btn{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;border-radius:6px;line-height:1;transition:all 0.2s}
+    .del-entry-btn:hover{background:#fef2f2;color:var(--red)}
+    /* Detail grid */
+    .hist-card-details{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--bg2);border-top:1px solid var(--bg2)}
+    .hdetail{background:var(--card);padding:9px 12px;text-align:center}
+    .hdetail-label{font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase}
+    .hdetail-val{font-size:13px;color:var(--text);font-family:'Space Mono',monospace;font-weight:600;margin-top:3px}
+    /* Phase bar in card */
+    .hphase-row{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg);border-top:1px solid var(--bg2)}
+    .hphase-icon{font-size:16px}
+    .hphase-label{font-size:12px;color:var(--text2);font-weight:500}
+    .hphase-sub{font-size:10px;color:var(--text3);margin-top:1px}
+    /* Progress bar in card */
+    .hprog-wrap{padding:0 14px 12px}
+    .hprog-bg{height:4px;background:var(--bg2);border-radius:99px;overflow:hidden}
+    .hprog-fill{height:100%;border-radius:99px;transition:width 0.6s ease}
+    /* Simple hist-row for week/all views */
+    .hist-row{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--card);border-radius:13px;margin-bottom:5px;box-shadow:var(--shadow)}
+    .hdate{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:2px}
+    .hpct{font-size:13px;font-family:'Space Mono',monospace;font-weight:700;text-align:right}
+    .hobj{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:2px;text-align:right}
+    .empty-hist{text-align:center;padding:50px 0;color:var(--text3);font-size:14px;line-height:2}
+    .stats-box{width:100%;background:var(--card);border-radius:16px;padding:16px;margin-top:6px;box-shadow:var(--shadow)}
+
+    /* ── CHAT ── */
+    .chat-wrap{width:100%;display:flex;flex-direction:column;gap:12px;height:calc(100vh - 180px)}
+    .api-key-box{background:var(--card);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+    .api-key-title{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+    .api-key-desc{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6}
+    .api-key-row{display:flex;gap:8px}
+    .api-key-input{flex:1;background:var(--bg2);border:2px solid transparent;border-radius:9px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;padding:9px 12px;outline:none;transition:border-color 0.2s}
+    .api-key-input:focus{border-color:var(--accent);background:#fff}
+    .api-key-save{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+    .api-key-saved{font-size:11px;color:var(--green);font-family:'Space Mono',monospace;margin-top:6px}
+    .chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
+    .msg{max-width:88%;padding:11px 14px;border-radius:14px;font-size:14px;line-height:1.55}
+    .msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+    .msg.assistant{background:var(--card);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:var(--shadow)}
+    .msg.typing{color:var(--text3);font-style:italic}
+    .chat-input-row{display:flex;gap:8px;padding-bottom:4px}
+    .chat-input{flex:1;background:var(--card);border:2px solid var(--border);border-radius:12px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color 0.2s;resize:none;max-height:120px;min-height:44px}
+    .chat-input:focus{border-color:var(--accent)}
+    .send-btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:0 18px;font-size:20px;cursor:pointer;box-shadow:0 2px 8px rgba(26,86,219,0.3);transition:all 0.2s;flex-shrink:0}
+    .send-btn:hover{opacity:0.85}
+    .send-btn:disabled{opacity:0.4;cursor:default}
+    .chat-suggestions{display:flex;gap:6px;flex-wrap:wrap}
+    .sugg-btn{background:var(--card);border:1px solid var(--border);border-radius:999px;color:var(--text2);font-size:12px;padding:6px 12px;cursor:pointer;transition:all 0.2s;font-family:'Plus Jakarta Sans',sans-serif}
+    .sugg-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--blue-light)}
+    .no-key-msg{background:var(--card);border-radius:16px;padding:20px;text-align:center;color:var(--text2);font-size:14px;line-height:1.7;box-shadow:var(--shadow)}
+
+    footer{margin-top:auto;padding:24px 0 16px;font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:3px}
+    input[type="time"],input[type="date"]{color-scheme:light}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .fu{animation:fadeUp 0.3s ease forwards}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+    .typing-dots::after{content:'●●●';animation:blink 1.2s ease infinite;letter-spacing:3px;font-size:12px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo-text">Fasting</div>
+      <div class="logo-sub">TRACKER</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" onclick="showView('timer')">Timer</button>
+      <button class="nav-btn" onclick="showView('history')">Historique</button>
+      <button class="nav-btn" onclick="showView('chat')">💬 Conseil</button>
+    </nav>
+  </header>
+
+  <!-- TIMER -->
+  <div class="view active" id="view-timer">
+    <div class="goals" id="goals-row">
+      <button class="goal-btn active" onclick="setGoal(16,this)">16:8</button>
+      <button class="goal-btn" onclick="setGoal(18,this)">18:6</button>
+      <button class="goal-btn" onclick="setGoal(20,this)">20:4</button>
+      <button class="goal-btn" onclick="setGoal(23,this)">OMAD</button>
+    </div>
+
+    <div class="circle-wrap">
+      <div class="circle-glow"></div>
+      <svg width="260" height="260" viewBox="0 0 260 260">
+        <defs>
+          <linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffe070"/><stop offset="40%" stop-color="#f5c842"/><stop offset="100%" stop-color="#1a56db"/>
+          </linearGradient>
+        </defs>
+        <circle cx="130" cy="130" r="112" fill="none" stroke="#dbeafe" stroke-width="13"/>
+        <circle id="arc" cx="130" cy="130" r="112" fill="none" stroke="url(#ag)" stroke-width="13"
+          stroke-dasharray="703.7" stroke-dashoffset="703.7" stroke-linecap="round"
+          style="transition:stroke-dashoffset 1s ease;filter:drop-shadow(0 0 7px rgba(26,86,219,0.45))"/>
+      </svg>
+      <div class="circle-center">
+        <div class="elapsed-time" id="elapsed-display">00:00:00</div>
+        <div class="goal-label" id="goal-label">objectif 16h</div>
+        <div class="goal-emoji" id="goal-emoji">⏳</div>
+      </div>
+    </div>
+
+    <div class="phase-card fu" id="phase-card" style="display:none">
+      <div class="phase-bubble" id="pb-wrap"><span id="pb">🍽</span></div>
+      <div class="phase-info">
+        <div class="phase-name" id="pname">Digestion</div>
+        <div class="phase-desc" id="pdesc">Votre corps traite le dernier repas</div>
+      </div>
+      <div class="phase-num" id="pnum">1/4</div>
+    </div>
+
+    <div class="info-strip" id="info-strip" style="display:none">
+      <div class="info-chip">
+        <div class="chip-label">Reste</div>
+        <div class="chip-val" id="chip-rem">—</div>
+      </div>
+      <div class="info-chip">
+        <div class="chip-label">Fin à</div>
+        <div class="chip-val" id="chip-end">—</div>
+      </div>
+    </div>
+
+    <div class="success fu" id="success-banner" style="display:none">🏆 &nbsp;Objectif atteint !</div>
+
+    <div class="phases-bar" id="phases-bar" style="display:none">
+      <div class="phases-label">Phases métaboliques</div>
+      <div class="phases-track" id="phases-track"></div>
+    </div>
+
+    <!-- BOTH EDITORS -->
+    <div class="editors-wrap fu" id="editors-wrap" style="display:none">
+      <!-- Start editor -->
+      <div class="time-editor">
+        <div class="editor-title">▶ Début du jeûne</div>
+        <div class="editor-row">
+          <input class="t-input" type="time" id="st-time" onfocus="editingTime=true" onblur="editingTime=false"/>
+          <input class="d-input" type="date" id="st-date" onfocus="editingTime=true" onblur="editingTime=false"/>
+          <button class="ok-btn" onclick="applyStart()">OK</button>
+        </div>
+        <div class="sc-row">
+          <button class="sc-btn" onclick="shiftStart(-4)">−4h</button>
+          <button class="sc-btn" onclick="shiftStart(-2)">−2h</button>
+          <button class="sc-btn" onclick="shiftStart(-1)">−1h</button>
+          <button class="sc-btn" onclick="shiftStart(1)">+1h</button>
+          <button class="sc-btn" onclick="shiftStart(2)">+2h</button>
+        </div>
+        <div class="editor-hint" id="start-hint">—</div>
+      </div>
+      <!-- End editor -->
+      <div class="time-editor">
+        <div class="editor-title">⏹ Fin prévue</div>
+        <div class="editor-row">
+          <input class="t-input" type="time" id="et-time" onfocus="editingTime=true" onblur="editingTime=false"/>
+          <input class="d-input" type="date" id="et-date" onfocus="editingTime=true" onblur="editingTime=false"/>
+          <button class="ok-btn" onclick="applyEnd()">OK</button>
+        </div>
+        <div class="sc-row">
+          <button class="sc-btn" onclick="shiftEnd(-2)">−2h</button>
+          <button class="sc-btn" onclick="shiftEnd(-1)">−1h</button>
+          <button class="sc-btn" onclick="shiftEnd(1)">+1h</button>
+          <button class="sc-btn" onclick="shiftEnd(2)">+2h</button>
+          <button class="sc-btn" onclick="shiftEnd(4)">+4h</button>
+        </div>
+        <div class="editor-hint" id="end-hint">—</div>
+      </div>
+    </div>
+
+    <button class="main-btn btn-start" id="main-btn" onclick="toggleFast()">▶ &nbsp;Démarrer</button>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="view" id="view-history">
+    <div class="hist-tabs">
+      <button class="period-btn active" onclick="setPeriod('day',this)">Jour</button>
+      <button class="period-btn" onclick="setPeriod('week',this)">Semaine</button>
+      <button class="period-btn" onclick="setPeriod('month',this)">Mois</button>
+      <button class="period-btn" onclick="setPeriod('all',this)">Tout</button>
+    </div>
+    <div class="pv active" id="pv-day"></div>
+    <div class="pv" id="pv-week"></div>
+    <div class="pv" id="pv-month"></div>
+    <div class="pv" id="pv-all"></div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="view" id="view-chat">
+    <div class="chat-wrap">
+      <!-- API key section -->
+      <div class="api-key-box" id="api-key-box">
+        <div class="api-key-title">🔑 Clé API Anthropic</div>
+        <div class="api-key-desc">Pour activer le chat, entre ta clé API Anthropic. Elle est stockée uniquement sur ton téléphone.</div>
+        <div class="api-key-row">
+          <input class="api-key-input" type="password" id="api-key-input" placeholder="sk-ant-..." />
+          <button class="api-key-save" onclick="saveApiKey()">Enregistrer</button>
+        </div>
+        <div class="api-key-saved" id="api-key-status"></div>
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-messages" id="chat-messages"></div>
+
+      <!-- Suggestions -->
+      <div class="chat-suggestions" id="chat-suggestions">
+        <button class="sugg-btn" onclick="sendSugg(this)">📊 Bilan de mon jeûne</button>
+        <button class="sugg-btn" onclick="sendSugg(this)">💡 Conseils pour tenir</button>
+        <button class="sugg-btn" onclick="sendSugg(this)">🍽 Que manger pour rompre?</button>
+        <button class="sugg-btn" onclick="sendSugg(this)">⚡ Effets sur mon profil</button>
+      </div>
+
+      <!-- Input -->
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" placeholder="Pose ta question…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendChat()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>FASTING · TRACKER</footer>
+</div>
+
+<script>
+const PHASES=[
+  {from:0,to:4,label:"Digestion",desc:"Traitement du dernier repas",icon:"🍽",color:"#93c5fd"},
+  {from:4,to:8,label:"Cétose légère",desc:"Le corps commence à brûler les graisses",icon:"🔥",color:"#60a5fa"},
+  {from:8,to:16,label:"Autophagie",desc:"Régénération cellulaire activée",icon:"⚡",color:"#3b82f6"},
+  {from:16,to:24,label:"Deep Fast",desc:"Jeûne profond, effets maximaux",icon:"✦",color:"#1d4ed8"},
+];
+
+let goalHours=16, startTime=null, endTime=null, ticker=null, editingTime=false;
+let history=JSON.parse(localStorage.getItem('fh2')||'[]');
+let chatHistory=[];
+
+const pad=n=>String(n).padStart(2,'0');
+const fmt=ms=>{const s=Math.floor(ms/1000);return`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`};
+const fmtDate=ts=>new Date(ts).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+const fmtTime=ts=>new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+const dayKey=ts=>{const d=new Date(ts);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  const idx={timer:0,history:1,chat:2}[v];
+  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  if(v==='history') renderHistory();
+  if(v==='chat') initChat();
+}
+
+function setGoal(h,btn){
+  goalHours=h;
+  document.querySelectorAll('.goal-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('goal-label').textContent=`objectif ${h}h`;
+  if(startTime){endTime=startTime+h*3600000;updateEditors();}
+}
+
+function toggleFast(){startTime?onStop():(startTime=Date.now(),endTime=startTime+goalHours*3600000,onStart())}
+
+function onStart(){
+  document.getElementById('goals-row').style.display='none';
+  document.getElementById('main-btn').className='main-btn btn-stop';
+  document.getElementById('main-btn').textContent='■  Arrêter';
+  document.getElementById('phase-card').style.display='flex';
+  document.getElementById('info-strip').style.display='flex';
+  document.getElementById('phases-bar').style.display='block';
+  document.getElementById('editors-wrap').style.display='flex';
+  buildPhasesBar(); updateEditors();
+  ticker=setInterval(tick,1000); tick();
+}
+
+function onStop(){
+  clearInterval(ticker);
+  const now=Date.now();
+  const duration=now-startTime;
+  const goalMs=endTime-startTime;
+  const elH=duration/3600000;
+  const phaseReached=PHASES.slice().reverse().find(p=>elH>=p.from)||PHASES[0];
+  const pct=Math.min(100,Math.round(duration/goalMs*100));
+  history.unshift({
+    id: Date.now(),
+    start:startTime, end:now, duration, goal:goalHours, goalMs,
+    completed:duration>=goalMs, pct,
+    phaseIcon:phaseReached.icon, phaseLabel:phaseReached.label, phaseIdx:PHASES.indexOf(phaseReached)
+  });
+  if(history.length>200)history.pop();
+  localStorage.setItem('fh2',JSON.stringify(history));
+  startTime=null; endTime=null;
+  document.getElementById('goals-row').style.display='flex';
+  document.getElementById('main-btn').className='main-btn btn-start';
+  document.getElementById('main-btn').textContent='▶  Démarrer';
+  ['phase-card','info-strip','phases-bar','success-banner','editors-wrap'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('elapsed-display').textContent='00:00:00';
+  document.getElementById('goal-emoji').textContent='⏳';
+  document.getElementById('arc').style.strokeDashoffset='703.7';
+  updateHistNav();
+}
+
+function tick(){
+  if(!startTime) return;
+  const now=Date.now();
+  const elapsed=now-startTime;
+  const goalMs=endTime-startTime;
+  const progress=Math.min(elapsed/goalMs,1);
+  const elapsedH=elapsed/3600000;
+
+  document.getElementById('elapsed-display').textContent=fmt(elapsed);
+  document.getElementById('arc').style.strokeDashoffset=703.7*(1-progress);
+
+  const phase=PHASES.find(p=>elapsedH>=p.from&&elapsedH<p.to)||PHASES[3];
+  const pi=PHASES.indexOf(phase);
+  document.getElementById('pb').textContent=phase.icon;
+  document.getElementById('pname').textContent=phase.label;
+  document.getElementById('pdesc').textContent=phase.desc;
+  document.getElementById('pnum').textContent=`${pi+1}/4`;
+
+  document.getElementById('chip-rem').textContent=fmt(Math.max(0,endTime-now));
+  document.getElementById('chip-end').textContent=fmtTime(endTime);
+
+  const done=progress>=1;
+  document.getElementById('success-banner').style.display=done?'block':'none';
+  document.getElementById('goal-emoji').textContent=done?'🏆':'⏳';
+
+  PHASES.forEach((p,i)=>{
+    const f=document.getElementById('pf-'+i),t=document.getElementById('pt-'+i);
+    if(!f) return;
+    f.style.width=Math.min(100,Math.max(0,(elapsedH-p.from)/(p.to-p.from)*100))+'%';
+    f.style.background=p.color;
+    t.className='phase-tick'+(phase===p?' active':'');
+  });
+
+  updateEditors();
+  localStorage.setItem('fasting-active',JSON.stringify({start:startTime,end:endTime,goal:goalHours}));
+}
+
+function buildPhasesBar(){
+  const track=document.getElementById('phases-track'); track.innerHTML='';
+  PHASES.forEach((p,i)=>{
+    const div=document.createElement('div'); div.className='phase-seg'; div.style.flex=p.to-p.from;
+    div.innerHTML=`<div class="phase-fill-bg"><div class="phase-fill" id="pf-${i}"></div></div><div class="phase-tick" id="pt-${i}">${p.icon}</div>`;
+    track.appendChild(div);
+  });
+}
+
+function updateEditors(){
+  if(!startTime||editingTime) return;
+  const s=new Date(startTime), e=new Date(endTime);
+  document.getElementById('st-time').value=`${pad(s.getHours())}:${pad(s.getMinutes())}`;
+  document.getElementById('st-date').value=s.toISOString().split('T')[0];
+  document.getElementById('et-time').value=`${pad(e.getHours())}:${pad(e.getMinutes())}`;
+  document.getElementById('et-date').value=e.toISOString().split('T')[0];
+  document.getElementById('start-hint').textContent='Démarré : '+fmtDate(startTime)+' à '+fmtTime(startTime);
+  const goalMs=endTime-startTime;
+  document.getElementById('end-hint').textContent=`Durée prévue : ${(goalMs/3600000).toFixed(1)}h`;
+}
+
+function applyStart(){
+  const t=document.getElementById('st-time').value, dt=document.getElementById('st-date').value;
+  if(!t||!dt) return;
+  const[h,m]=t.split(':').map(Number); const d=new Date(dt); d.setHours(h,m,0,0);
+  if(d>Date.now()){alert("L'heure de début ne peut pas être dans le futur.");return}
+  startTime=d.getTime(); tick();
+}
+
+function applyEnd(){
+  const t=document.getElementById('et-time').value, dt=document.getElementById('et-date').value;
+  if(!t||!dt) return;
+  const[h,m]=t.split(':').map(Number); const d=new Date(dt); d.setHours(h,m,0,0);
+  if(d<=startTime){alert("La fin doit être après le début.");return}
+  endTime=d.getTime(); tick();
+}
+
+function shiftStart(h){
+  if(!startTime) return;
+  const n=startTime+h*3600000;
+  if(n>Date.now()) return;
+  startTime=n; tick();
+}
+
+function shiftEnd(h){
+  if(!endTime) return;
+  const n=endTime+h*3600000;
+  if(n<=startTime) return;
+  endTime=n; tick();
+}
+
+function updateHistNav(){
+  document.querySelectorAll('.nav-btn')[1].textContent=history.length>0?`Hist. (${history.length})`:'Historique';
+}
+
+/* ── HISTORY ── */
+let calMonth=new Date();
+function setPeriod(p,btn){
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.pv').forEach(v=>v.classList.remove('active'));
+  document.getElementById('pv-'+p).classList.add('active');
+  renderHistory();
+}
+function renderHistory(){renderDay();renderWeek();renderMonth();renderAll()}
+
+function deleteEntry(id){
+  history=history.filter(e=>(e.id||e.start)!==id);
+  localStorage.setItem('fh2',JSON.stringify(history));
+  updateHistNav(); renderHistory();
+}
+function deleteDay(k, btn){
+  if(btn.dataset.confirm==='1'){
+    history=history.filter(e=>dayKey(e.start)!==k);
+    localStorage.setItem('fh2',JSON.stringify(history));
+    updateHistNav(); renderHistory();
+  } else {
+    btn.dataset.confirm='1';
+    btn.textContent='⚠ Confirmer';
+    btn.style.color='#ef4444';
+    btn.style.background='#fef2f2';
+    setTimeout(()=>{if(btn.dataset.confirm){btn.dataset.confirm='';btn.textContent='🗑 jour';btn.style.color='';btn.style.background=''}},3000);
+  }
+}
+
+function renderDay(){
+  const el=document.getElementById('pv-day');
+  if(!history.length){el.innerHTML='<div class="empty-hist">Lance ton premier jeûne.</div>';return}
+  const groups={};
+  history.forEach(e=>{const k=dayKey(e.start);if(!groups[k])groups[k]=[];groups[k].push(e)});
+  const keys=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).slice(0,30);
+  let html='';
+  keys.forEach(k=>{
+    html+=`<div class="hs-title-row">
+      <div class="hs-title">${new Date(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <button class="del-day-btn" onclick="deleteDay('${k}', this)">🗑 jour</button>
+    </div>`;
+    groups[k].forEach(e=>{
+      const goalMs=e.goalMs||e.goal*3600000;
+      const gH=(goalMs/3600000).toFixed(1);
+      const pct=e.pct!=null?e.pct:Math.min(100,Math.round(e.duration/goalMs*100));
+      const endTs=e.end||e.start+e.duration;
+      const phIcon=e.phaseIcon||'⏳';
+      const phLabel=e.phaseLabel||'—';
+      const phIdx=e.phaseIdx!=null?e.phaseIdx+1:'—';
+      const pctColor=e.completed?'#10b981':pct>=75?'#1a56db':'#94afc8';
+      const progColor=e.completed?'#10b981':'#1a56db';
+      const entryId=e.id||e.start;
+      html+=`<div class="hist-card">
+        <div class="hist-card-top">
+          <div class="hist-card-left">
+            <div class="hi ${e.completed?'ok':'nok'}">${e.completed?'✓':'·'}</div>
+            <div>
+              <div class="hd">${fmt(e.duration)}</div>
+              <div class="htime">${fmtTime(e.start)} → ${fmtTime(endTs)}</div>
+            </div>
+          </div>
+          <div class="hist-card-right">
+            <div class="hpct-badge" style="color:${pctColor}">${pct}%</div>
+            <button class="del-entry-btn" onclick="deleteEntry(${entryId})">🗑</button>
+          </div>
+        </div>
+        <div class="hprog-wrap">
+          <div class="hprog-bg"><div class="hprog-fill" style="width:${pct}%;background:${progColor}"></div></div>
+        </div>
+        <div class="hist-card-details">
+          <div class="hdetail">
+            <div class="hdetail-label">Objectif</div>
+            <div class="hdetail-val">${gH}h</div>
+          </div>
+          <div class="hdetail">
+            <div class="hdetail-label">Durée réelle</div>
+            <div class="hdetail-val">${(e.duration/3600000).toFixed(1)}h</div>
+          </div>
+          <div class="hdetail">
+            <div class="hdetail-label">Protocole</div>
+            <div class="hdetail-val">${e.goal}:${24-e.goal}</div>
+          </div>
+        </div>
+        <div class="hphase-row">
+          <div class="hphase-icon">${phIcon}</div>
+          <div>
+            <div class="hphase-label">${phLabel}</div>
+            <div class="hphase-sub">Phase ${phIdx}/4 atteinte</div>
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML=html;
+}
+
+function renderWeek(){
+  const el=document.getElementById('pv-week');
+  if(!history.length){el.innerHTML='<div class="empty-hist">Aucune donnée.</div>';return}
+  const now=Date.now();
+  const weeks=Array.from({length:8},(_,i)=>{const e=now-i*7*86400000;return{start:e-7*86400000,end:e,entries:history.filter(h=>h.start>=e-7*86400000&&h.start<e)}}).reverse();
+  const labels=['S-7','S-6','S-5','S-4','S-3','S-2','S-1','Sem.'];
+  const maxH=Math.max(...weeks.map(w=>w.entries.reduce((a,b)=>a+b.duration,0)/3600000),1);
+  let barsHtml='';
+  weeks.forEach((w,i)=>{
+    const totalH=w.entries.reduce((a,b)=>a+b.duration,0)/3600000;
+    const h=Math.round(totalH/maxH*100);
+    barsHtml+=`<div class="bar-col"><div class="bar-outer"><div class="bar-inner" style="height:${h}%"></div></div><div class="bar-label">${labels[i]}</div>${totalH>0?`<div class="bar-val">${totalH.toFixed(0)}h</div>`:''}</div>`;
+  });
+  const tw=weeks[7],twT=tw.entries.reduce((a,b)=>a+b.duration,0),twC=tw.entries.filter(e=>e.completed).length,twA=tw.entries.length?twT/tw.entries.length:0;
+  el.innerHTML=`<div class="week-bars"><div class="wb-title">Heures jeûnées / semaine</div><div class="bars-row">${barsHtml}</div></div>
+  <div class="period-summary"><div class="ps-title">Cette semaine</div><div class="ps-stats">
+    <div class="pstat"><div class="pstat-val">${tw.entries.length}</div><div class="pstat-lbl">Jeûnes</div></div>
+    <div class="pstat"><div class="pstat-val">${twC}</div><div class="pstat-lbl">Complétés</div></div>
+    <div class="pstat"><div class="pstat-val">${(twT/3600000).toFixed(1)}h</div><div class="pstat-lbl">Total</div></div>
+    <div class="pstat"><div class="pstat-val">${twA>0?(twA/3600000).toFixed(1)+'h':'—'}</div><div class="pstat-lbl">Moy.</div></div>
+  </div></div>`;
+}
+
+function renderMonth(){
+  const el=document.getElementById('pv-month');
+  if(!history.length){el.innerHTML='<div class="empty-hist">Aucune donnée.</div>';return}
+  const y=calMonth.getFullYear(),m=calMonth.getMonth();
+  const firstDay=(new Date(y,m,1).getDay()+6)%7,daysInMonth=new Date(y,m+1,0).getDate(),today=new Date();
+  const dayMap={};
+  history.forEach(e=>{const d=new Date(e.start);if(d.getFullYear()===y&&d.getMonth()===m){const k=d.getDate();if(!dayMap[k])dayMap[k]=[];dayMap[k].push(e)}});
+  let cal=['L','M','M','J','V','S','D'].map(d=>`<div class="cal-dh">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++)cal+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const es=dayMap[d]||[],isT=today.getDate()===d&&today.getMonth()===m&&today.getFullYear()===y;
+    let cls=es.length?es.some(e=>e.completed)?'complete':'partial':'no-fast';
+    cal+=`<div class="cal-day ${cls}${isT?' today-marker':''}">${d}</div>`;
+  }
+  const me=Object.values(dayMap).flat(),mT=me.reduce((a,b)=>a+b.duration,0),mC=me.filter(e=>e.completed).length,mD=Object.keys(dayMap).length;
+  const prevMonths=[];
+  for(let i=1;i<=5;i++){const pm=new Date(y,m-i,1);const es=history.filter(e=>{const d=new Date(e.start);return d.getFullYear()===pm.getFullYear()&&d.getMonth()===pm.getMonth()});if(es.length)prevMonths.push({label:pm.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}),entries:es,total:es.reduce((a,b)=>a+b.duration,0),comp:es.filter(e=>e.completed).length})}
+  let ph='';if(prevMonths.length){ph='<div class="hs-title">Mois précédents</div>';prevMonths.forEach(p=>{ph+=`<div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hi ok" style="font-size:11px">${p.label}</div><div><div class="hd">${p.entries.length} jeûne${p.entries.length>1?'s':''}</div><div class="hdate">${p.comp} complétés</div></div></div><div><div class="hpct" style="color:var(--accent)">${(p.total/3600000).toFixed(0)}h</div><div class="hobj">total</div></div></div>`})}
+  el.innerHTML=`<div class="month-cal"><div class="mc-header"><button class="mc-nav" onclick="changeMonth(-1)">‹</button><div class="mc-title">${calMonth.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</div><button class="mc-nav" onclick="changeMonth(1)">›</button></div><div class="cal-grid">${cal}</div></div>
+  <div class="period-summary"><div class="ps-title">Ce mois</div><div class="ps-stats">
+    <div class="pstat"><div class="pstat-val">${me.length}</div><div class="pstat-lbl">Jeûnes</div></div>
+    <div class="pstat"><div class="pstat-val">${mC}</div><div class="pstat-lbl">Complétés</div></div>
+    <div class="pstat"><div class="pstat-val">${mD}</div><div class="pstat-lbl">Jours actifs</div></div>
+    <div class="pstat"><div class="pstat-val">${(mT/3600000).toFixed(0)}h</div><div class="pstat-lbl">Total</div></div>
+  </div></div>${ph}`;
+}
+function changeMonth(d){calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+d,1);renderMonth()}
+
+function renderAll(){
+  const el=document.getElementById('pv-all');
+  if(!history.length){el.innerHTML='<div class="empty-hist">Lance ton premier jeûne.</div>';return}
+  const total=history.reduce((a,b)=>a+b.duration,0),comp=history.filter(e=>e.completed).length,best=Math.max(...history.map(e=>e.duration)),avg=total/history.length;
+  let html=`<div class="period-summary"><div class="ps-title">Depuis le début</div><div class="ps-stats">
+    <div class="pstat"><div class="pstat-val">${history.length}</div><div class="pstat-lbl">Jeûnes</div></div>
+    <div class="pstat"><div class="pstat-val">${comp}</div><div class="pstat-lbl">Complétés</div></div>
+    <div class="pstat"><div class="pstat-val">${(total/3600000).toFixed(0)}h</div><div class="pstat-lbl">Total</div></div>
+    <div class="pstat"><div class="pstat-val">${Math.round(comp/history.length*100)}%</div><div class="pstat-lbl">Réussite</div></div>
+  </div></div>
+  <div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hi ok">🏆</div><div><div class="hd">Record</div><div class="hdate">${fmt(best)}</div></div></div><div><div class="hd">Moyenne</div><div class="hdate">${fmt(avg)}</div></div></div>
+  <div class="hs-title">Tous les jeûnes</div>`;
+  history.forEach(e=>{
+    const gMs=e.goalMs||e.goal*3600000,pct=Math.min(100,Math.round(e.duration/gMs*100));
+    html+=`<div class="hist-row"><div style="display:flex;align-items:center;gap:10px"><div class="hi ${e.completed?'ok':'nok'}">${e.completed?'✓':'·'}</div><div><div class="hd">${fmt(e.duration)}</div><div class="hdate">${fmtDate(e.start)} ${fmtTime(e.start)}</div></div></div><div><div class="hpct" style="color:${e.completed?'#22c55e':'#a8b4cc'}">${pct}%</div><div class="hobj">obj. ${(gMs/3600000).toFixed(1)}h</div></div></div>`;
+  });
+  el.innerHTML=html;
+}
+
+/* ── CHAT ── */
+function initChat(){
+  const key=localStorage.getItem('fasting-api-key');
+  const box=document.getElementById('api-key-box');
+  if(key){
+    document.getElementById('api-key-input').value='sk-ant-••••••••';
+    document.getElementById('api-key-status').textContent='✓ Clé enregistrée';
+    box.style.display='none';
+  } else {
+    box.style.display='block';
+  }
+  if(!chatHistory.length) addWelcomeMsg();
+}
+
+function addWelcomeMsg(){
+  const elapsed=startTime?Date.now()-startTime:null;
+  const status=startTime
+    ?`Tu es actuellement en jeûne depuis ${fmt(elapsed)} (objectif ${goalHours}h).`
+    :'Tu n\'as pas de jeûne en cours.';
+  const stats=history.length?`Tu as réalisé ${history.length} jeûne(s) enregistré(s).`:'';
+  addMsg('assistant',`👋 Bonjour ! Je suis ton assistant jeûne. ${status} ${stats}\n\nPose-moi tes questions sur le jeûne intermittent, ton protocole, ou tes résultats.`);
+}
+
+function saveApiKey(){
+  const val=document.getElementById('api-key-input').value.trim();
+  if(!val||!val.startsWith('sk-ant-')){alert('Clé invalide. Elle doit commencer par sk-ant-');return}
+  localStorage.setItem('fasting-api-key',val);
+  document.getElementById('api-key-status').textContent='✓ Clé enregistrée';
+  document.getElementById('api-key-box').style.display='none';
+}
+
+function addMsg(role,text){
+  const el=document.getElementById('chat-messages');
+  const div=document.createElement('div');
+  div.className=`msg ${role}`;
+  div.textContent=text;
+  el.appendChild(div);
+  el.scrollTop=el.scrollHeight;
+  return div;
+}
+
+function sendSugg(btn){
+  document.getElementById('chat-input').value=btn.textContent.replace(/^[^\w]+/,'');
+  sendChat();
+}
+
+async function sendChat(){
+  const key=localStorage.getItem('fasting-api-key');
+  if(!key){
+    document.getElementById('api-key-box').style.display='block';
+    alert('Entre d\'abord ta clé API.');
+    return;
+  }
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();
+  if(!text) return;
+  input.value=''; input.style.height='auto';
+  document.getElementById('send-btn').disabled=true;
+  document.getElementById('chat-suggestions').style.display='none';
+
+  addMsg('user',text);
+  chatHistory.push({role:'user',content:text});
+
+  const typing=addMsg('assistant','');
+  typing.classList.add('typing');
+  typing.innerHTML='<span class="typing-dots"></span>';
+
+  // Build context
+  const elapsed=startTime?Date.now()-startTime:null;
+  const ctx=`L'utilisateur utilise une app de fasting intermittent. ${startTime?`Il est actuellement en jeûne depuis ${fmt(elapsed)} sur un objectif de ${goalHours}h.`:'Il n\'a pas de jeûne en cours.'} ${history.length?`Il a ${history.length} jeûne(s) dans son historique. Taux de réussite : ${Math.round(history.filter(e=>e.completed).length/history.length*100)}%.`:''} Réponds en français, de façon concise et pratique.`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        system:ctx,
+        messages:chatHistory
+      })
+    });
+    const data=await resp.json();
+    if(data.error){typing.textContent='Erreur : '+data.error.message;typing.classList.remove('typing');return}
+    const reply=data.content[0].text;
+    typing.textContent=reply;
+    typing.classList.remove('typing');
+    chatHistory.push({role:'assistant',content:reply});
+    if(chatHistory.length>20) chatHistory=chatHistory.slice(-20);
+  }catch(e){
+    typing.textContent='Erreur de connexion. Vérifie ta clé API et ta connexion.';
+    typing.classList.remove('typing');
+  }
+  document.getElementById('send-btn').disabled=false;
+}
+
+/* Restore — uniquement si session récente et non expirée */
+const saved=localStorage.getItem('fasting-active');
+if(saved){
+  try {
+    const p=JSON.parse(saved);
+    const now=Date.now();
+    const maxAge=48*3600000; // max 48h
+    const st=p.start, et=p.end||p.start+p.goal*3600000;
+    // Restaure seulement si : démarré il y a moins de 48h ET heure de fin pas trop dépassée (max 2h)
+    if(st && (now-st)<maxAge && (now-et)<2*3600000){
+      startTime=st; endTime=et; goalHours=p.goal;
+      document.querySelectorAll('.goal-btn').forEach(b=>{
+        if((goalHours===23&&b.textContent==='OMAD')||parseInt(b.textContent)===goalHours){b.classList.add('active');document.getElementById('goal-label').textContent=`objectif ${goalHours}h`}
+        else b.classList.remove('active');
+      });
+      onStart();
+    } else {
+      // Session trop vieille ou déjà terminée — on nettoie
+      localStorage.removeItem('fasting-active');
+    }
+  } catch(e){ localStorage.removeItem('fasting-active'); }
+}
+updateHistNav();
+if('serviceWorker'in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
