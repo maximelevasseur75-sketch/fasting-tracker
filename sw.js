@@ -1,5 +1,9 @@
-const CACHE = 'fasting-v1';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE = 'fasting-v3';
+const ASSETS = [
+  '/fasting-tracker/',
+  '/fasting-tracker/index.html',
+  '/fasting-tracker/manifest.json'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
